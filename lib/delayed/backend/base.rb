@@ -8,20 +8,26 @@ module Delayed
       module ClassMethods
         # Add a job to the queue
         def enqueue(*args)
-          object = args.shift
-          unless object.respond_to?(:perform)
-            raise ArgumentError, 'Cannot enqueue items which do not respond to perform'
+          options = {
+            :priority => Delayed::Worker.default_priority,
+            :queue => Delayed::Worker.default_queue
+            }.merge!(args.extract_options!)
+
+            options[:payload_object] ||= args.shift
+
+            if args.size > 0
+              warn "[DEPRECATION] Passing multiple arguments to `#enqueue` is deprecated. Pass a hash with :priority and :run_at."
+              options[:priority] = args.first || options[:priority]
+              options[:run_at]   = args[1]
+            end          
+
+            self.create(options)
           end
-    
-          priority = args.first || Delayed::Worker.default_priority
-          run_at   = args[1]
-          self.create(:payload_object => object, :priority => priority.to_i, :run_at => run_at)
-        end
 
         def reserve(worker, max_run_time = Worker.max_run_time)
           # We get up to 5 jobs from the db. In case we cannot get exclusive access to a job we try the next.
           # this leads to a more even distribution of jobs across the worker processes
-          find_available(worker.name, 5, max_run_time).detect do |job|
+          find_available(worker.name, worker.queues, 5, max_run_time).detect do |job|
             job.lock_exclusively!(max_run_time, worker.name)
           end
         end
