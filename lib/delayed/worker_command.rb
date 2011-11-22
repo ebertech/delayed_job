@@ -8,7 +8,9 @@ class Delayed::WorkerCommand < Clamp::Command
 
     def execute
       File.open(pid_file_name(queue), "w+"){|f| f << Process.pid}        
-      puts "Wrote pid to #{pid_file_name(queue)}"
+      Delayed::Worker.logger = Logger.new(log_file_name(queue))
+      Delayed::Worker.logger.info "Wrote pid to #{pid_file_name(queue)}"
+
       Delayed::Worker.new(
       :min_priority => min_priority, 
       :max_priority => max_priority, 
@@ -22,19 +24,20 @@ class Delayed::WorkerCommand < Clamp::Command
     parameter "QUEUE", "the queue from which to take jobs", :default => "delayed_job"  
     def execute
       pid = File.read(pid_file_name(queue)).to_i
-      puts "Killing #{pid}..."
+      Delayed::Worker.logger = Logger.new(log_file_name(queue))      
+      Delayed::Worker.logger.info "Killing #{pid}..."
       begin
         Timeout::timeout(20) do 
           Process.kill("SIGABRT", pid) 
           Process.wait(pid)
         end
       rescue Errno::ESRCH
-        puts "No such process, or it's already dead"
+        Delayed::Worker.logger.info "No such process, or it's already dead"
       rescue Timeout::Error
-        puts "Timeout, forcing kill"
+        Delayed::Worker.logger.info "Timeout, forcing kill"
         Process.kill("SIGKILL", pid)
       end
-      puts "Removing pid file #{pid_file_name(queue)}"
+      Delayed::Worker.logger.info "Removing pid file #{pid_file_name(queue)}"
       FileUtils.rm(pid_file_name(queue))
     end    
   end
@@ -43,8 +46,17 @@ class Delayed::WorkerCommand < Clamp::Command
     File.join(Rails.root, "tmp", "pids")
   end
 
+  def log_dir
+    File.join(Rails.root, "log")
+  end
+
+  def log_file_name(queue)
+    FileUtils.mkdir_p(log_dir)
+    File.join(log_dir, "delayed_job_#{queue}.log")    
+  end
+
   def pid_file_name(queue)      
     FileUtils.mkdir_p(pid_dir)
-    File.join(pid_dir, "#{queue}.pid")
+    File.join(pid_dir, "delayed_job_#{queue}.pid")
   end
 end
