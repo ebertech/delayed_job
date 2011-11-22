@@ -23,10 +23,11 @@ class Delayed::WorkerCommand < Clamp::Command
   subcommand "stop", "Stop a worker" do   
     parameter "QUEUE", "the queue from which to take jobs", :default => "delayed_job"  
     def execute
-      pid = File.read(pid_file_name(queue)).to_i
-      Delayed::Worker.logger = Logger.new(log_file_name(queue))      
-      Delayed::Worker.logger.info "Killing #{pid}..."
       begin
+        pid = File.read(pid_file_name(queue)).to_i
+        Delayed::Worker.logger = Logger.new(log_file_name(queue))      
+        Delayed::Worker.logger.info "Killing #{pid}..."
+
         Timeout::timeout(20) do 
           Process.kill("SIGABRT", pid) 
           Process.wait(pid)
@@ -36,9 +37,11 @@ class Delayed::WorkerCommand < Clamp::Command
       rescue Timeout::Error
         Delayed::Worker.logger.info "Timeout, forcing kill"
         Process.kill("SIGKILL", pid)
+      rescue Errno::ENOENT
+        Delayed::Worker.logger.info "Could not open pid file #{pid_file_name(queue)}"
       end
       Delayed::Worker.logger.info "Removing pid file #{pid_file_name(queue)}"
-      FileUtils.rm(pid_file_name(queue))
+      FileUtils.rm_f(pid_file_name(queue))
     end    
   end
 
