@@ -7,6 +7,7 @@ require File.dirname(__FILE__) + '/delayed/yaml_ext'
 require File.dirname(__FILE__) + '/delayed/backend/base'
 require File.dirname(__FILE__) + '/delayed/worker'
 require File.dirname(__FILE__) + '/delayed/deserialization_error'
+require File.dirname(__FILE__) + '/delayed/worker_command'
 require File.dirname(__FILE__) + '/delayed/railtie' if defined?(Rails::Railtie)
 
 Object.send(:include, Delayed::MessageSending)
