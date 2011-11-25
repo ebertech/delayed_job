@@ -7,8 +7,8 @@ class Delayed::WorkerCommand < Clamp::Command
     option "--max-priority", "MAX_PRIORITY", "maximum priority of jobs to handle", :default => nil
 
     def execute
-      File.open(pid_file_name(queue), "w+"){|f| f << Process.pid}        
       Delayed::Worker.logger = Logger.new(log_file_name(queue))
+      File.open(pid_file_name(queue), "w+"){|f| f << Process.pid}        
       Delayed::Worker.logger.info "Wrote pid to #{pid_file_name(queue)}"
 
       Delayed::Worker.new(
@@ -23,9 +23,9 @@ class Delayed::WorkerCommand < Clamp::Command
   subcommand "stop", "Stop a worker" do   
     parameter "QUEUE", "the queue from which to take jobs", :default => "delayed_job"  
     def execute
+      Delayed::Worker.logger = Logger.new(log_file_name(queue))      
       begin
         pid = File.read(pid_file_name(queue)).to_i
-        Delayed::Worker.logger = Logger.new(log_file_name(queue))      
         Delayed::Worker.logger.info "Killing #{pid}..."
 
         Timeout::timeout(20) do 
