@@ -10,7 +10,8 @@ class Delayed::WorkerCommand < Clamp::Command
       Delayed::Worker.logger = Logger.new(log_file_name(queue))
       File.open(pid_file_name(queue), "w+"){|f| f << Process.pid}        
       Delayed::Worker.logger.info "Wrote pid to #{pid_file_name(queue)}"
-
+      Rails.logger = Delayed::Worker.logger
+      
       Delayed::Worker.new(
       :min_priority => min_priority, 
       :max_priority => max_priority, 
