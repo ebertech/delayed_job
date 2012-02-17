@@ -5,7 +5,9 @@ class Delayed::WorkerCommand < Clamp::Command
     parameter "QUEUE", "the queue from which to take jobs", :default => "delayed_job"
     option "--min-priority", "MIN_PRIORITY", "minimum priority of jobs to handle", :default => nil
     option "--max-priority", "MAX_PRIORITY", "maximum priority of jobs to handle", :default => nil
-
+    option "--pid-file", "PID_FILE", "the pid file to use", :default => nil
+    option "--log-file", "LOG_FILE", "the log file to use", :default => nil
+    
     def execute
       File.open(pid_file_name(queue), "w+"){|f| f << Process.pid}        
       Delayed::Worker.logger = Logger.new(log_file_name(queue))
@@ -21,7 +23,10 @@ class Delayed::WorkerCommand < Clamp::Command
   end
 
   subcommand "stop", "Stop a worker" do   
-    parameter "QUEUE", "the queue from which to take jobs", :default => "delayed_job"  
+    parameter "[QUEUE]", "the queue from which to take jobs", :default => "delayed_job"  
+    option "--pid-file", "PID_FILE", "the pid file to use", :default => nil
+    option "--log-file", "LOG_FILE", "the log file to use", :default => nil
+    
     def execute
       begin
         pid = File.read(pid_file_name(queue)).to_i
@@ -54,11 +59,13 @@ class Delayed::WorkerCommand < Clamp::Command
   end
 
   def log_file_name(queue)
+    return log_file if log_file     
     FileUtils.mkdir_p(log_dir)
     File.join(log_dir, "delayed_job_#{queue}.log")    
   end
 
-  def pid_file_name(queue)      
+  def pid_file_name(queue) 
+    return pid_file if pid_file     
     FileUtils.mkdir_p(pid_dir)
     File.join(pid_dir, "delayed_job_#{queue}.pid")
   end
